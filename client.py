@@ -18,3 +18,6 @@ while True:
     print(f'Client: {msg}')
 
     s.send('Client: Sending Messaqge'.encode())
+
+s.shutdown(socket.SHUT_RDWR)
+s.close()

@@ -31,8 +31,8 @@ def main():
                 ent_send.config(state='disabled')
                 btn_send.config(state='disabled')
 
-                btn_port_disconnect.grid_remove()
-                btn_port_connect.grid(row=0, column=2, sticky='e', padx=5)
+                btn_port_connect.grid_remove()
+                btn_port_disconnect.grid(row=0, column=2, sticky='e', padx=5)
 
                 lbl_client['text'] = 'Waiting for Client to connect'
 
@@ -41,13 +41,11 @@ def main():
                 lbl_client['text'] = f'Connected to Client, {addr[0]}:{addr[1]}'
 
                 process_recv_client_msg = threading.Thread(target=client_recv)
+                process_recv_client_msg.daemon = True
                 process_recv_client_msg.start()
 
                 ent_send.config(state='normal')
                 btn_send.config(state='normal')
-
-                btn_port_connect.grid_remove()
-                btn_port_disconnect.grid(row=0, column=2, sticky='e', padx=5)
 
                 process_recv_client_msg.join()
         finally:
@@ -66,6 +64,7 @@ def main():
             print(f'Socket listening on port {ip}:{port}')
 
             process_connect_client = threading.Thread(target=connect_client)
+            process_connect_client.daemon = True
             process_connect_client.start()
             
         except Exception as e:
@@ -76,11 +75,12 @@ def main():
         global s, client, process_connect_client
         
         client.send('\nquit\n'.encode())
-        s.shutdown(socket.SHUT_WR)
         s.close()
-
+        print('client closed')
         process_connect_client.join()
-
+        print('cleint recv closed')
+        btn_port_disconnect.grid_remove()
+        btn_port_connect.grid(row=0, column=2, sticky='e', padx=5)
         lbl_client['text'] = f'Connect to port'
     
     def client_recv():
@@ -90,7 +90,7 @@ def main():
             while True:
                 msg = client.recv(1024).decode()
 
-                if msg == '\nquit\n':
+                if msg == '\nquit\n' or msg == '':
                     break
                 
                 lbl_client['text'] = f'Client: {msg}'
