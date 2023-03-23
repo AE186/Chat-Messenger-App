@@ -2,19 +2,21 @@ import tkinter as tk
 import socket
 import sys
 import threading
+import select
 import multiprocessing
 
 s = None
 client = None
 addr = None
+connect_event = threading.Event()
 process_connect_client = None
 process_recv_client_msg = None
-processes = []
 
 def main():
     def create_socket():
         global s
         try:
+            socket.setdefaulttimeout(0)
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             print("Socket Created")
         except socket.error as err:
@@ -27,7 +29,7 @@ def main():
         try:
             while True:
                 print('Listening on Port')
-
+                client = None
                 ent_send.config(state='disabled')
                 btn_send.config(state='disabled')
 
@@ -36,7 +38,14 @@ def main():
 
                 lbl_client['text'] = 'Waiting for Client to connect'
 
-                client, addr = s.accept()
+                while client == None:
+                    read, write, error = select.select([s], [], [])
+                    for sock in read:
+                        client, addr = sock.accept()
+
+                    if connect_event.is_set():
+                        raise Exception('Thread is not listening on port')
+                print(addr)
 
                 lbl_client['text'] = f'Connected to Client, {addr[0]}:{addr[1]}'
 
@@ -48,21 +57,23 @@ def main():
                 btn_send.config(state='normal')
 
                 process_recv_client_msg.join()
-        finally:
-            print("Thread not listening on port")
+        except Exception as e:
+            print(e)
 
     def port_connect():
-        global s, client, addr, process_connect_client
+        global s, client, addr, process_connect_client, connect_event
         create_socket()
 
         try:
             port = int(ent_port.get())
             ip = 'localhost'
+            s.settimeout(0)
             s.bind((ip, port))
             s.listen(1)
 
             print(f'Socket listening on port {ip}:{port}')
 
+            connect_event = threading.Event()
             process_connect_client = threading.Thread(target=connect_client)
             process_connect_client.daemon = True
             process_connect_client.start()
@@ -74,11 +85,12 @@ def main():
     def port_disconnect():
         global s, client, process_connect_client
         
-        client.send('\nquit\n'.encode())
+        connect_event.set()
         s.close()
-        print('client closed')
+        
         process_connect_client.join()
-        print('cleint recv closed')
+        
+        print('port disconnected')
         btn_port_disconnect.grid_remove()
         btn_port_connect.grid(row=0, column=2, sticky='e', padx=5)
         lbl_client['text'] = f'Connect to port'
@@ -87,6 +99,7 @@ def main():
         global client
 
         try:
+            client.setblocking(1)
             while True:
                 msg = client.recv(1024).decode()
 
