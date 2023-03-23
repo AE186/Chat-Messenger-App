@@ -16,3 +16,5 @@ while True:
         break
 
     print(f'Client: {msg}')
+
+    s.send('Client: Sending Messaqge'.encode())
