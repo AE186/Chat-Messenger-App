@@ -20,8 +20,13 @@ except socket.error as err:
 
 #     s.send('Client: Sending Messaqge'.encode())
 
-s.send('Client: Sending Messaqge'.encode())
-time.sleep(3)
+for i in range(10):
+    try:
+        s.send(f'Sending Messaqge {i}'.encode())
+        time.sleep(1)
+    except ConnectionAbortedError as e:
+        break
+# print(s.recv(1024).decode())
 
 s.shutdown(socket.SHUT_RDWR)
 s.close()
