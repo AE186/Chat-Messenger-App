@@ -87,7 +87,7 @@ def main():
         
         connect_event.set()
         s.close()
-        
+        print('Event set')
         process_connect_client.join()
         
         print('port disconnected')
@@ -109,6 +109,7 @@ def main():
                 lbl_client['text'] = f'Client: {msg}'
         finally:
             print('Ending Client Recv thread')
+            client.close()
 
 
     window = tk.Tk()
