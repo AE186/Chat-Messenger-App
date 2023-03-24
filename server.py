@@ -15,6 +15,7 @@ process_recv_client_msg = None
 client_lock = threading.Lock()
 
 def main():
+    # Function initializes a socket
     def create_socket():
         global s
         try:
@@ -24,6 +25,10 @@ def main():
             print(f"Socket Creation Failed: {err}")
             sys.exit(0)
 
+    # Function runs in a thread created by port_connect()
+    # Listens on port for any clients 
+    # creates another thread for receiving messages from clients
+    # Uses non-blocking sockets
     def connect_client():
         global s, client, addr, process_connect_client, process_recv_client_msg
         
@@ -62,6 +67,8 @@ def main():
         except Exception as e:
             print(e)
 
+    # Function for pressing button connect
+    # creates a socket on port specified and creates a thread for listening
     def port_connect():
         global s, client, addr, process_connect_client, connect_event
         create_socket()
@@ -84,6 +91,8 @@ def main():
             lbl_client['text'] = 'Error'
             print(e)
     
+    # Function for pressing button disconnect
+    # disconnects all clients and closes socket created on port
     def port_disconnect():
         global s, client, process_connect_client, client_event, connect_event
 
@@ -101,6 +110,9 @@ def main():
         btn_port_connect.grid(row=0, column=2, sticky='e', padx=5)
         lbl_client['text'] = f'Connect to port'
     
+    # Function Created as Thread by connect_client(), for recieving messages from client
+    # thread joins connect_client() when client_event is set or client disconnects
+    # Uses non-blocking client for a non-blocking recv
     def client_recv():
         global client
 
@@ -131,7 +143,8 @@ def main():
                     lbl_client['text'] = f'Client: {msg}'
                     msg = None
 
-    
+    # Function for pressing send button
+    # Sends a message to connected client
     def send_to_client():
         msg = ent_send.get()
 
