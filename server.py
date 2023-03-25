@@ -46,7 +46,7 @@ def main():
             process_connect_client.start()
             
         except Exception as e:
-            lbl_client['text'] = 'Error'
+            lbl_client['text'] = 'Error While Connecting to Socket'
             print(e)
     
     # Function runs in a thread created by port_connect()
