@@ -115,7 +115,7 @@ def main():
     # Uses non-blocking client for a non-blocking recv
     def client_recv():
         global client
-
+        msg = None
         client.setblocking(0)
         while True:
             try:

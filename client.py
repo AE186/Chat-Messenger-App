@@ -43,10 +43,11 @@ def main():
         try:
             client = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
             client.connect((text[0],port))
-            # print('Connected to server')
+            print('Connected to server')
             # inputThread = threading.Thread(target=inputFunction,args=(client,))
             # inputThread.start()
             outputThread = threading.Thread(target=outputFunction)
+            outputThread.daemon = True
             outputThread.start()
             # inputThread.join()
             # outputThread.join()
