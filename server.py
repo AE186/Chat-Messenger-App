@@ -25,6 +25,30 @@ def main():
             print(f"Socket Creation Failed: {err}")
             sys.exit(0)
 
+    # Function for pressing button connect
+    # creates a socket on port specified and creates a thread for listening
+    def port_connect():
+        global s, client, addr, process_connect_client, connect_event
+        create_socket()
+
+        try:
+            port = int(ent_port.get())
+            ip = 'localhost'
+            s.settimeout(0)
+            s.bind((ip, port))
+            s.listen(1)
+
+            print(f'Socket listening on port {ip}:{port}')
+
+            connect_event.clear()
+            process_connect_client = threading.Thread(target=connect_client)
+            process_connect_client.daemon = True
+            process_connect_client.start()
+            
+        except Exception as e:
+            lbl_client['text'] = 'Error'
+            print(e)
+    
     # Function runs in a thread created by port_connect()
     # Listens on port for any clients 
     # creates another thread for receiving messages from clients
@@ -66,49 +90,6 @@ def main():
                 process_recv_client_msg.join()
         except Exception as e:
             print(e)
-
-    # Function for pressing button connect
-    # creates a socket on port specified and creates a thread for listening
-    def port_connect():
-        global s, client, addr, process_connect_client, connect_event
-        create_socket()
-
-        try:
-            port = int(ent_port.get())
-            ip = 'localhost'
-            s.settimeout(0)
-            s.bind((ip, port))
-            s.listen(1)
-
-            print(f'Socket listening on port {ip}:{port}')
-
-            connect_event.clear()
-            process_connect_client = threading.Thread(target=connect_client)
-            process_connect_client.daemon = True
-            process_connect_client.start()
-            
-        except Exception as e:
-            lbl_client['text'] = 'Error'
-            print(e)
-    
-    # Function for pressing button disconnect
-    # disconnects all clients and closes socket created on port
-    def port_disconnect():
-        global s, client, process_connect_client, client_event, connect_event
-
-        client_event.set()
-        connect_event.set()
-
-        print('All Events set, waiting for thread to join')
-        process_connect_client.join()
-
-        print('Socket Closed')
-        print()
-        s.close()
-        
-        btn_port_disconnect.grid_remove()
-        btn_port_connect.grid(row=0, column=2, sticky='e', padx=5)
-        lbl_client['text'] = f'Connect to port'
     
     # Function Created as Thread by connect_client(), for recieving messages from client
     # thread joins connect_client() when client_event is set or client disconnects
@@ -142,6 +123,25 @@ def main():
                 elif msg is not None:
                     lbl_client['text'] = f'Client: {msg}'
                     msg = None
+    
+    # Function for pressing button disconnect
+    # disconnects all clients and closes socket created on port
+    def port_disconnect():
+        global s, client, process_connect_client, client_event, connect_event
+
+        client_event.set()
+        connect_event.set()
+
+        print('All Events set, waiting for thread to join')
+        process_connect_client.join()
+
+        print('Socket Closed')
+        print()
+        s.close()
+        
+        btn_port_disconnect.grid_remove()
+        btn_port_connect.grid(row=0, column=2, sticky='e', padx=5)
+        lbl_client['text'] = f'Connect to port'
 
     # Function for pressing send button
     # Sends a message to connected client
