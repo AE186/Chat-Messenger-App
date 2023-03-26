@@ -12,7 +12,6 @@ connect_event = threading.Event()
 client_event = threading.Event()
 process_connect_client = None
 process_recv_client_msg = None
-client_lock = threading.Lock()
 
 def main():
     # Function initializes a socket
@@ -25,7 +24,7 @@ def main():
             print(f"Socket Creation Failed: {err}")
             sys.exit(0)
 
-    # Function for pressing button connect
+    # Function for button connect
     # creates a socket on port specified and creates a thread for listening
     def port_connect():
         global s, client, addr, process_connect_client, connect_event
@@ -50,11 +49,10 @@ def main():
             print(e)
     
     # Function runs in a thread created by port_connect()
-    # Listens on port for any clients 
-    # creates another thread for receiving messages from clients
+    # Listens on port for any clients and connects with them
     # Uses non-blocking sockets
     def connect_client():
-        global s, client, addr, process_connect_client, process_recv_client_msg
+        global s, client, addr, process_connect_client, process_recv_client_msg, client_event, connect_event
         
         try:
             while not connect_event.is_set():
@@ -75,33 +73,34 @@ def main():
                         client, addr = sock.accept()
                     if connect_event.is_set():
                         raise Exception('Thread is not listening on port')
+                    
                 print(addr)
 
                 lbl_client['text'] = f'Connected to Client, {addr[0]}:{addr[1]}'
-
-                client_event.clear()
-                process_recv_client_msg = threading.Thread(target=client_recv)
-                process_recv_client_msg.daemon = True
-                process_recv_client_msg.start()
-
                 ent_send.config(state='normal')
                 btn_send.config(state='normal')
+                # lbl_client.grid_remove()
+                # txt_client.grid()
 
-                process_recv_client_msg.join()
+                client_event.clear()
+                client_recv()
+        except socket.error as err:
+            print(err)
+            sys.exit(0) 
         except Exception as e:
             print(e)
     
-    # Function Created as Thread by connect_client(), for recieving messages from client
-    # thread joins connect_client() when client_event is set or client disconnects
-    # Uses non-blocking client for a non-blocking recv
+    # Function for recieving messages from client
+    # Runs in the thread after socket connects with client
+    # Uses non-blocking client socket for a non-blocking recv
     def client_recv():
-        global client
+        global client, client_event
+
         msg = None
         client.setblocking(0)
-        while True:
+        while not client_event.is_set():
             try:
-                with client_lock:
-                    read, write, error = select.select([client], [], [], 0)
+                read, write, error = select.select([client], [], [], 0)
                 for sock in read:
                     msg = sock.recv(1024).decode()
 
@@ -112,19 +111,36 @@ def main():
                 if msg == '':
                     print('Ending Client Recv thread')
                     client.close()
+                    # txt_client.config(state='normal')
+                    # print('Removing Text Box')
+                    # txt_client.delete(0, tk.END)
+                    # txt_client.grid_remove()
+                    # print('Client label Put')
+                    # lbl_client.grid(row=0 ,column=0, sticky='w')
+                    # print('Gui Changes done')
                     break
                 
                 elif client_event.is_set():
                     print('Ending Client Recv thread')
                     client.shutdown(socket.SHUT_RDWR)
                     client.close()
+                    # txt_client.config(state='normal')
+                    # print('Removing Text Box')
+                    # txt_client.delete(0, tk.END)
+                    # txt_client.grid_remove()
+                    # print('Client label Put')
+                    # lbl_client.grid(row=0 ,column=0, sticky='w')
+                    # print('Gui Changes done')
                     break
 
                 elif msg is not None:
                     lbl_client['text'] = f'Client: {msg}'
+                    # txt_client.config(state='normal')
+                    # txt_client.insert(tk.END, f'Client: {msg}\n')
+                    # txt_client.config(state='disabled')
                     msg = None
     
-    # Function for pressing button disconnect
+    # Function for button disconnect
     # disconnects all clients and closes socket created on port
     def port_disconnect():
         global s, client, process_connect_client, client_event, connect_event
@@ -143,15 +159,14 @@ def main():
         btn_port_connect.grid(row=0, column=2, sticky='e', padx=5)
         lbl_client['text'] = f'Connect to port'
 
-    # Function for pressing send button
+    # Function for send button
     # Sends a message to connected client
     def send_to_client():
         msg = ent_send.get()
 
         if not msg == '':
             try:
-                with client_lock:
-                    client.send(msg.encode())
+                client.send(msg.encode())
             except ConnectionAbortedError as e:
                 print('Client has disconnected')
         
@@ -162,7 +177,7 @@ def main():
 
     # Set window size
     window.geometry('300x190')
-    window.minsize(300, 200)
+    window.minsize(300,200)
     window.maxsize(300,200)
 
     # Creating 3 frames, for port, msg recv and msg send
@@ -196,6 +211,7 @@ def main():
     frm_2.columnconfigure(0, weight=1)
 
     lbl_client = tk.Label(frm_2, text='Connect to a port')
+    # txt_client = tk.Text(frm_2, state='disabled')
     lbl_client.grid(sticky='w')
 
     # Add gui widgets for sending clients msg
